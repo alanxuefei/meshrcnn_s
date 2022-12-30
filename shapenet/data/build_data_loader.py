@@ -17,7 +17,7 @@ def _identity(x):
 
 
 def build_data_loader(
-    cfg, dataset, split_name, num_workers=4, multigpu=False, shuffle=True, num_samples=None
+    cfg, dataset, split_name, num_workers=4, multigpu=False, shuffle=False, num_samples=None
 ):
 
     batch_size = cfg.SOLVER.BATCH_SIZE

@@ -97,7 +97,6 @@ class MeshVoxDataset(Dataset):
         RT = metadata["extrinsics"][iid]
         img_path = metadata["image_list"][iid]
         img_path = os.path.join(self.data_dir, sid, mid, "images", img_path)
-
         # Load the image
         with PathManager.open(img_path, "rb") as f:
             img = Image.open(f).convert("RGB")
@@ -143,7 +142,6 @@ class MeshVoxDataset(Dataset):
                     voxel_data = torch.load(f)
                 voxels = voxel_data["voxel_coords"]
                 P = K.mm(RT)
-
         id_str = "%s-%s-%02d" % (sid, mid, iid)
         return img, verts, faces, points, normals, voxels, P, id_str
 
@@ -249,6 +247,7 @@ class MeshVoxDataset(Dataset):
             points, normals = sample_points_from_meshes(
                 meshes, num_samples=self.num_samples, return_normals=True
             )
+
         if voxels is not None:
             if torch.is_tensor(voxels):
                 # We used cached voxels on disk, just cast and return
@@ -260,7 +259,7 @@ class MeshVoxDataset(Dataset):
                 voxels = []
                 for i, cur_voxel_coords in enumerate(voxel_coords):
                     cur_voxel_coords = cur_voxel_coords.to(device)
-                    cur_voxels = self._voxelize(cur_voxel_coords, Ps[i])
+                    cur_voxels = self._voxelize(cur_voxel_coords, Ps[0])
                     voxels.append(cur_voxels)
                 voxels = torch.stack(voxels, dim=0)
 
