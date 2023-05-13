@@ -109,7 +109,7 @@ class MeshVoxDataset(Dataset):
             with PathManager.open(mesh_path, "rb") as f:
                 mesh_data = torch.load(f)
             verts, faces = mesh_data["verts"], mesh_data["faces"]
-            verts = project_verts(verts, RT)
+            #verts = project_verts(verts, RT)
 
         # Maybe use cached samples
         points, normals = None, None
@@ -141,9 +141,11 @@ class MeshVoxDataset(Dataset):
                 with PathManager.open(voxel_path, "rb") as f:
                     voxel_data = torch.load(f)
                 voxels = voxel_data["voxel_coords"]
+                # Compute the projection matrix P by multiplying the intrinsic matrix K and the extrinsic matrix RT
                 P = K.mm(RT)
+
         id_str = "%s-%s-%02d" % (sid, mid, iid)
-        return img, verts, faces, points, normals, voxels, P, id_str
+        return img, verts, faces, points, normals, voxels, P, id_str, RT
 
 
     def _coordinates(self, voxels, P):
@@ -210,7 +212,7 @@ class MeshVoxDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        imgs, verts, faces, points, normals, voxels, Ps, id_strs = zip(*batch)
+        imgs, verts, faces, points, normals, voxels, Ps, id_strs, RT = zip(*batch)
         imgs = torch.stack(imgs, dim=0)
         if verts[0] is not None and faces[0] is not None:
             # TODO(gkioxari) Meshes should accept tuples
@@ -231,12 +233,12 @@ class MeshVoxDataset(Dataset):
         elif voxels[0].dim() == 3:
             # They are actual voxels
             voxels = torch.stack(voxels, dim=0)
-        return imgs, meshes, points, normals, voxels, Ps, id_strs
+        return imgs, meshes, points, normals, voxels, Ps, id_strs, RT
 
     def postprocess(self, batch, device=None):
         if device is None:
             device = torch.device("cuda")
-        imgs, meshes, points, normals, voxels, Ps, id_strs = batch
+        imgs, meshes, points, normals, voxels, Ps, id_strs, RT = batch
         imgs = imgs.to(device)
         if meshes is not None:
             meshes = meshes.to(device)
