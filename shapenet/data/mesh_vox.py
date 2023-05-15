@@ -147,26 +147,6 @@ class MeshVoxDataset(Dataset):
         id_str = "%s-%s-%02d" % (sid, mid, iid)
         return img, verts, faces, points, normals, voxels, P, id_str, RT
 
-
-    def _coordinates(self, voxels, P):
-        V = self.voxel_size
-        zmin = SHAPENET_MIN_ZMIN
-        zmax = SHAPENET_MAX_ZMAX
-
-        cur_voxel_coords = torch.nonzero(voxels)
-        cur_voxel_coords = cur_voxel_coords * 2 / (V-1) - 1
-        coords_z = cur_voxel_coords[:, 0].clone()
-        cur_voxel_coords[:, 0] = cur_voxel_coords[:, 2]
-        cur_voxel_coords[:, 2] = coords_z
-        cur_voxel_coords[:, 1].mul_(-1) # Flip y
-        m = 2.0 / (zmax - zmin)
-        b = -2.0 * zmin / (zmax - zmin) - 1
-        cur_voxel_coords[:, 2].sub_(b).div_(m)
-
-        cur_voxel_coords = project_verts(cur_voxel_coords, P)
-
-        return cur_voxel_coords
-
     def _voxelize(self, voxel_coords, P):
         V = self.voxel_size
         device = voxel_coords.device
@@ -249,7 +229,6 @@ class MeshVoxDataset(Dataset):
             points, normals = sample_points_from_meshes(
                 meshes, num_samples=self.num_samples, return_normals=True
             )
-
         if voxels is not None:
             if torch.is_tensor(voxels):
                 # We used cached voxels on disk, just cast and return
@@ -261,7 +240,7 @@ class MeshVoxDataset(Dataset):
                 voxels = []
                 for i, cur_voxel_coords in enumerate(voxel_coords):
                     cur_voxel_coords = cur_voxel_coords.to(device)
-                    cur_voxels = self._voxelize(cur_voxel_coords, Ps[0])
+                    cur_voxels = self._voxelize(cur_voxel_coords, Ps[i])
                     voxels.append(cur_voxels)
                 voxels = torch.stack(voxels, dim=0)
 
