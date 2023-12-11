@@ -1,0 +1,21 @@
+{
+	"name": "maskrcnns",
+	"image": "meshrcnns:latest",
+	"forwardPorts": [
+	  8888 // Jupyter Lab port
+	],
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/workspace,type=bind",
+	"workspaceFolder": "/home/workspace",
+    "features": {
+        // "ghcr.io/devcontainers/features/desktop-lite:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {},
+            "extensions": [
+                "GitHub.copilot"
+            ]
+        }
+    }	
+}

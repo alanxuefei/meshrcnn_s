@@ -9,6 +9,7 @@ from pytorch3d.structures import Meshes
 from torch.utils.data import Dataset
 
 import torchvision.transforms as T
+import numpy as np
 from PIL import Image
 from shapenet.data.utils import imagenet_preprocess
 from shapenet.utils.coords import SHAPENET_MAX_ZMAX, SHAPENET_MIN_ZMIN, project_verts
@@ -49,6 +50,10 @@ class MeshVoxDataset(Dataset):
         if normalize_images:
             transform.append(imagenet_preprocess())
         self.transform = T.Compose(transform)
+        
+        # Define the transformation to convert the image to a tensor
+        transform_tensor = [T.ToTensor()]
+        self.transform_tensor = T.Compose(transform_tensor)
 
         summary_json = os.path.join(data_dir, "summary.json")
         with PathManager.open(summary_json, "r") as f:
@@ -99,8 +104,10 @@ class MeshVoxDataset(Dataset):
         img_path = os.path.join(self.data_dir, sid, mid, "images", img_path)
         # Load the image
         with PathManager.open(img_path, "rb") as f:
+            img_orig = Image.open(f).convert("RGBA")
             img = Image.open(f).convert("RGB")
         img = self.transform(img)
+        img_orig =self.transform_tensor(img_orig)
 
         # Maybe read mesh
         verts, faces = None, None
@@ -145,7 +152,7 @@ class MeshVoxDataset(Dataset):
                 P = K.mm(RT)
 
         id_str = "%s-%s-%02d" % (sid, mid, iid)
-        return img, verts, faces, points, normals, voxels, P, id_str, RT
+        return img_orig, img, verts, faces, points, normals, voxels, P, id_str, RT
 
     def _voxelize(self, voxel_coords, P):
         V = self.voxel_size
@@ -192,8 +199,9 @@ class MeshVoxDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        imgs, verts, faces, points, normals, voxels, Ps, id_strs, RT = zip(*batch)
+        imgs_orig, imgs, verts, faces, points, normals, voxels, Ps, id_strs, RT = zip(*batch)
         imgs = torch.stack(imgs, dim=0)
+        imgs_orig = torch.stack(imgs_orig, dim=0)
         if verts[0] is not None and faces[0] is not None:
             # TODO(gkioxari) Meshes should accept tuples
             meshes = Meshes(verts=list(verts), faces=list(faces))
@@ -213,12 +221,12 @@ class MeshVoxDataset(Dataset):
         elif voxels[0].dim() == 3:
             # They are actual voxels
             voxels = torch.stack(voxels, dim=0)
-        return imgs, meshes, points, normals, voxels, Ps, id_strs, RT
+        return imgs_orig, imgs, meshes, points, normals, voxels, Ps, id_strs, RT
 
     def postprocess(self, batch, device=None):
         if device is None:
             device = torch.device("cuda")
-        imgs, meshes, points, normals, voxels, Ps, id_strs, RT = batch
+        img_orig, imgs, meshes, points, normals, voxels, Ps, id_strs, RT = batch
         imgs = imgs.to(device)
         if meshes is not None:
             meshes = meshes.to(device)

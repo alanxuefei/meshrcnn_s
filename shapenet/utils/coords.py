@@ -74,6 +74,7 @@ def voxel_to_world(meshes):
     Output:
     - meshes: Meshes in world coordinate system
     """
+ 
     verts = meshes.verts_packed()
     x, y, z = verts.unbind(dim=1)
 
@@ -84,6 +85,7 @@ def voxel_to_world(meshes):
     y = -y
     z = (z - b) / m
     verts = torch.stack([x, y, z], dim=1)
+    print("voxel_tdddo_world(meshes)")
     verts = blender_ndc_to_world(verts)
 
     verts_list = list(verts.split(meshes.num_verts_per_mesh().tolist(), dim=0))
